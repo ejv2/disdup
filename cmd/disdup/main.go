@@ -7,7 +7,7 @@ import (
 	"github.com/ethanv2/disdup"
 )
 
-// Flags.
+// Command line flags.
 var (
 	AuthToken = flag.String("token", "", "Bot authentication token")
 )
@@ -19,9 +19,11 @@ func main() {
 		log.Fatalln("disdup: auth token required but not provided")
 	}
 
+	log.Println("Connecting to discord...")
 	dup, err := disdup.NewDuplicator(*AuthToken)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer dup.Close()
+	log.Println("Connection to Discord established")
 }
