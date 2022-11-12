@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
+	"os/signal"
 
 	"github.com/ethanv2/disdup"
 )
@@ -14,7 +16,6 @@ var (
 
 func main() {
 	flag.Parse()
-
 	if *AuthToken == "" {
 		log.Fatalln("disdup: auth token required but not provided")
 	}
@@ -26,4 +27,14 @@ func main() {
 	}
 	defer dup.Close()
 	log.Println("Connection to Discord established")
+
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt)
+
+	select {
+	case <-sigint:
+		log.Println("Caught interrupt. Terminating gracefully")
+	case err := <-dup.Wait():
+		log.Println(err)
+	}
 }
