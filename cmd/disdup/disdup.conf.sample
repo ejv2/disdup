@@ -1,0 +1,11 @@
+{
+	"token": "ABCDEF123456",
+	"name": "disdup",
+	"guilds": {
+		"My Server": {
+			"disable": false,
+			"enabled_channels": [],
+			"enabled_users": []
+		}
+	}
+}

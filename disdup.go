@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/ethanv2/disdup/conf"
 )
 
 // Duplicator errors.
@@ -14,15 +15,21 @@ var (
 
 type Duplicator struct {
 	conn *discordgo.Session
+	conf config.Config
 
 	cerr chan error
 	stop chan struct{}
 }
 
-func NewDuplicator(token string) (Duplicator, error) {
-	var dup Duplicator
+func NewDuplicator(conf config.Config) (Duplicator, error) {
+	var err error
+	dup := Duplicator{
+		conf: conf,
+		cerr: make(chan error),
+		stop: make(chan struct{}),
+	}
 
-	conn, err := discordgo.New("Bot " + token)
+	dup.conn, err = discordgo.New("Bot " + conf.Token)
 	if err != nil {
 		return Duplicator{}, fmt.Errorf("duplicator: session creation: %w", err)
 	}
@@ -31,23 +38,19 @@ func NewDuplicator(token string) (Duplicator, error) {
 	//  - Send messages
 	//  - Read sent messages
 	//  - All of the above in private channels/group chats
-	conn.Identify.Intents = discordgo.IntentGuildMessages |
-		discordgo.IntentMessageContent | discordgo.IntentDirectMessages
+	//  - See when a guild is added, changes name etc.
+	dup.conn.Identify.Intents = discordgo.IntentGuildMessages |
+		discordgo.IntentMessageContent | discordgo.IntentDirectMessages | discordgo.IntentGuilds
 
 	// Event handling.
 	// Discordgo automatically dispatches events to the correct handler
 	// based on method signature.
-	conn.AddHandler(dup.onDisconnect)
+	dup.conn.AddHandler(dup.onDisconnect)
 
-	if err = conn.Open(); err != nil {
+	if err = dup.conn.Open(); err != nil {
 		return Duplicator{}, fmt.Errorf("duplicator: connection: %w", err)
 	}
 
-	dup = Duplicator{
-		conn: conn,
-		cerr: make(chan error),
-		stop: make(chan struct{}),
-	}
 	return dup, nil
 }
 

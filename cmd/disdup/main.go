@@ -15,13 +15,17 @@ var (
 )
 
 func main() {
-	flag.Parse()
-	if *AuthToken == "" {
-		log.Fatalln("disdup: auth token required but not provided")
+	cfg, err := LoadConfig()
+	if err != nil {
+		log.Fatal("config error: ", err)
+	}
+
+	if *AuthToken != "" {
+		cfg.Token = *AuthToken
 	}
 
 	log.Println("Connecting to discord...")
-	dup, err := disdup.NewDuplicator(*AuthToken)
+	dup, err := disdup.NewDuplicator(cfg)
 	if err != nil {
 		log.Fatalln(err)
 	}
