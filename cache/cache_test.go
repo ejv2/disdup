@@ -17,7 +17,7 @@ func (m MockProvider) Channel(channelID string) (c *discordgo.Channel, err error
 		}, nil
 	}
 
-	return &discordgo.Channel{}, ErrMissing
+	return nil, ErrMissing
 }
 
 func (m MockProvider) User(userID string) (u *discordgo.User, err error) {
@@ -28,7 +28,7 @@ func (m MockProvider) User(userID string) (u *discordgo.User, err error) {
 		}, nil
 	}
 
-	return &discordgo.User{}, ErrMissing
+	return nil, ErrMissing
 }
 
 func (m MockProvider) Guild(guildID string) (st *discordgo.Guild, err error) {
@@ -40,21 +40,7 @@ func (m MockProvider) Guild(guildID string) (st *discordgo.Guild, err error) {
 		}, nil
 	}
 
-	return &discordgo.Guild{}, ErrMissing
-}
-
-type FakeProvider struct{}
-
-func (m FakeProvider) Channel(channelID string) (c *discordgo.Channel, err error) {
-	return &discordgo.Channel{}, nil
-}
-
-func (m FakeProvider) User(userID string) (u *discordgo.User, err error) {
-	return &discordgo.User{}, nil
-}
-
-func (m FakeProvider) Guild(guildID string) (st *discordgo.Guild, err error) {
-	return &discordgo.Guild{}, nil
+	return nil, ErrMissing
 }
 
 func testChannel(t *testing.T) {
@@ -112,7 +98,7 @@ func testUser(t *testing.T) {
 	if err != nil {
 		t.Error("Unexpected error from user retrieval:", err)
 	}
-	uexpect, _ := MockProvider{}.User("5678")
+	uexpect, _ := provider.User("5678")
 	if u.ID != uexpect.ID {
 		t.Error("Incorrect user returned from retrieval")
 	}
@@ -159,7 +145,7 @@ func testGuild(t *testing.T) {
 	if err != nil {
 		t.Error("Unexpected error from guild retrieval:", err)
 	}
-	gexpect, _ := MockProvider{}.Guild("9101112")
+	gexpect, _ := provider.Guild("9101112")
 	if g.ID != gexpect.ID {
 		t.Error("Incorrect guild returned from retrieval")
 	}
