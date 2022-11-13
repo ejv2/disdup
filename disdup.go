@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ethanv2/disdup/cache"
+	config "github.com/ethanv2/disdup/conf"
+
 	"github.com/bwmarrin/discordgo"
-	"github.com/ethanv2/disdup/conf"
 )
 
 // Duplicator errors.
@@ -14,8 +16,9 @@ var (
 )
 
 type Duplicator struct {
-	conn *discordgo.Session
-	conf config.Config
+	conn  *discordgo.Session
+	cache *cache.Cache
+	conf  config.Config
 
 	cerr chan error
 	stop chan struct{}
@@ -42,10 +45,14 @@ func NewDuplicator(conf config.Config) (Duplicator, error) {
 	dup.conn.Identify.Intents = discordgo.IntentGuildMessages |
 		discordgo.IntentMessageContent | discordgo.IntentDirectMessages | discordgo.IntentGuilds
 
+	// Set up cache based on current discord session
+	dup.cache = cache.NewCache(dup.conn)
+
 	// Event handling.
 	// Discordgo automatically dispatches events to the correct handler
 	// based on method signature.
 	dup.conn.AddHandler(dup.onDisconnect)
+	dup.conn.AddHandler(dup.onMessage)
 
 	if err = dup.conn.Open(); err != nil {
 		return Duplicator{}, fmt.Errorf("duplicator: connection: %w", err)
