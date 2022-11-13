@@ -9,15 +9,18 @@ type Config struct {
 	// Name is the nickname the bot will assume upon being added to a guild
 	Name string `json:"name"`
 	// Guilds is a map of guild names or IDs to their associated
-	// configuration.
+	// configuration. This is not an optional key: servers not configured
+	// are ignored
 	Guilds map[string]GuildConfig `json:"guilds"`
 }
 
 // GuildConfig represents the configuration for a single guild. It may be
-// configured via either a name or guild ID, the ID taking precedence.
+// configured via either a name or guild ID, the ID taking precedence. The zero
+// value of this type is a valid configuration which duplicates all messages
+// from a server.
 type GuildConfig struct {
 	// Disable this guild? Disabled guilds will be entirely ignored for
-	// duplication
+	// duplication. Guilds are enabled by default
 	Disable bool `json:"disable"`
 	// EnabledChannels are which channels the bot will duplicate from. This
 	// does not override "enable"; disabled guilds will still not be
