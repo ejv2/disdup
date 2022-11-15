@@ -3,6 +3,7 @@ package disdup
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/ethanv2/disdup/cache"
 	config "github.com/ethanv2/disdup/conf"
@@ -94,6 +95,29 @@ func (d Duplicator) err(err error) {
 		return
 	case d.cerr <- err:
 		close(d.stop)
+	}
+}
+
+// onMessage is the event handler for a message creation event in any of the
+// guilds of which the bot is a member.
+func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	c, err := d.cache.Channel(m.ChannelID)
+	if err != nil {
+		log.Println("[WARNING]: duplicator: onmessage: invalid channel:", err)
+		return
+	}
+	g, err := d.cache.Guild(m.GuildID)
+	if err != nil {
+		log.Println("[WARNING]: duplicator: onmessage: invalid guild:", err)
+		return
+	}
+
+	if d.conf.MessageMatches(config.MessageMatcher{
+		Author:  *m.Author,
+		Channel: c,
+		Guild:   g,
+	}) {
+		log.Printf("@%s in #%s: %s", m.Author.Username, c.Name, m.Content)
 	}
 }
 
