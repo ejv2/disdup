@@ -54,6 +54,7 @@ func NewDuplicator(conf config.Config) (Duplicator, error) {
 	// based on method signature.
 	dup.conn.AddHandler(dup.onDisconnect)
 	dup.conn.AddHandler(dup.onMessage)
+	dup.conn.AddHandler(dup.onJoin)
 
 	if err = dup.conn.Open(); err != nil {
 		return Duplicator{}, fmt.Errorf("duplicator: connection: %w", err)
@@ -98,6 +99,11 @@ func (d Duplicator) err(err error) {
 	}
 }
 
+// updateNickname attempts to change the nickname of the bot in the guild `g`.
+func (d Duplicator) updateNickname(g *discordgo.Guild) error {
+	return d.conn.GuildMemberNickname(g.ID, "@me", d.conf.Name)
+}
+
 // onMessage is the event handler for a message creation event in any of the
 // guilds of which the bot is a member.
 func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -118,6 +124,13 @@ func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 		Guild:   g,
 	}) {
 		log.Printf("@%s in #%s: %s", m.Author.Username, c.Name, m.Content)
+	}
+}
+
+// onJoin is the event handler for when the bot is added to a guild.
+func (d Duplicator) onJoin(s *discordgo.Session, c *discordgo.GuildCreate) {
+	if err := d.updateNickname(c.Guild); err != nil {
+		d.err(err)
 	}
 }
 
