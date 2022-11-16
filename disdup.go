@@ -25,6 +25,14 @@ type Duplicator struct {
 	stop chan struct{}
 }
 
+// NewDuplicator initializes and starts running a new duplicator. As soon as
+// this call completes, the duplicator is connected to Discord and serving
+// events.
+//
+// NOTE: This call returns asynchronously. To wait for the duplicator to
+// complete, use Duplicator.Run or Duplicator.Wait. It is the caller's
+// responsibility to call close and to check for errors from the runner
+// channel.
 func NewDuplicator(conf config.Config) (Duplicator, error) {
 	var err error
 	dup := Duplicator{
