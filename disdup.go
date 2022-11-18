@@ -1,3 +1,7 @@
+// Package disdup implements a simple and programmable Discord message bouncer.
+// It can be configured to duplicate messages from only certain guilds,
+// channels or users and can convert messages to a variety of different
+// formats.
 package disdup
 
 import (
