@@ -17,3 +17,27 @@ type Message struct {
 	ChannelName   string
 	GuildName     string
 }
+
+// An Output is a destination for messages from Disdup. It has a very similar
+// interface to os.File and io.ReadCloser, mainly for familiarity with existing
+// APIs.
+//
+// Open is called at duplicator startup once. It is called concurrently with
+// other outputs, so it may not duplicate state. It is responsible for
+// initialising the state of the output. If error returned is not nil, disdup
+// startup is aborted and the error is propagated to the client.
+//
+// Write is called whenever a matching incoming message event is received. For
+// more information on available information, see the documentation for the
+// Message struct. You are free to do any operation in Write, but it is best
+// not to block for too long. as no new message events can be processed until
+// all outputs for the current one have completed.
+//
+// Close is called exactly once upon the dropping of the output by disdup. If
+// it throws an error, the rest of the close callbacks will be called before
+// the error is propagated to the client code.
+type Output interface {
+	Open(s *discordgo.Session) error
+	Write(m Message)
+	Close() error
+}
