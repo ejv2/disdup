@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethanv2/disdup/cache"
 	config "github.com/ethanv2/disdup/conf"
+	"github.com/ethanv2/disdup/output"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -129,13 +130,42 @@ func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 		log.Println("[WARNING]: duplicator: onmessage: invalid guild:", err)
 		return
 	}
+	cont, err := m.ContentWithMoreMentionsReplaced(s)
+	if err != nil {
+		log.Println("[WARNING]: duplicator: onmessage: invalid message:", err)
+		// Call stops on first invalid reference found, so some of the
+		// message will be valid, so we should continue
+	}
 
 	if d.conf.MessageMatches(config.MessageMatcher{
 		Author:  *m.Author,
 		Channel: c,
 		Guild:   g,
 	}) {
-		log.Printf("@%s in #%s: %s", m.Author.Username, c.Name, m.Content)
+		msg := output.Message{
+			Message:       m.Message,
+			PrettyContent: cont,
+			ChannelName:   c.Name,
+			GuildName:     g.Name,
+		}
+
+		gconf := d.conf.FindGuild(m.GuildID, g.Name)
+		for _, o := range d.conf.Outputs {
+			go func(out config.OutputConfig) {
+				// An empty output array means unconditionally output
+				if len(gconf.Output) == 0 {
+					out.Output.Write(msg)
+					return
+				}
+
+				for _, name := range gconf.Output {
+					if out.Name == name {
+						out.Output.Write(msg)
+					}
+				}
+			}(o)
+		}
+		// log.Printf("@%s in #%s: %s", msg.Author.Username, msg.ChannelName, msg.Content)
 	}
 }
 

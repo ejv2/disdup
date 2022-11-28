@@ -12,6 +12,22 @@ type MessageMatcher struct {
 	Channel discordgo.Channel
 }
 
+// FindGuild looks up the first guild configuration matching either id or name,
+// with id taking precedence. If none could be found, nil is returned.
+func (c Config) FindGuild(id, name string) *GuildConfig {
+	g, ok := c.Guilds[id]
+	if !ok {
+		g, ok = c.Guilds[name]
+		if !ok {
+			return nil
+		}
+
+		return &g
+	}
+
+	return &g
+}
+
 // MessageMatches returns true if a message matches the criteria in Config,
 // else returns false. A special MessageMatcher object is used to pass message
 // info such that client code can do any lookups that it wishes, rather than
