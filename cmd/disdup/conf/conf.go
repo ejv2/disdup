@@ -1,4 +1,5 @@
-package main
+// Package clconf loads CLient Conf from configuration files.
+package clconf
 
 import (
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 // Key os-independent file names or paths.
 const (
 	PrimaryConfigName = "disdup.conf"
+	OutputConfigName  = "outputs.conf"
 )
 
 // Generic config loading related errors.
@@ -23,6 +25,7 @@ var (
 	ErrNotFound = errors.New("not found")
 	ErrSyntax   = errors.New("bad syntax")
 	ErrIO       = errors.New("I/O error")
+	ErrOutput   = errors.New("invalid output")
 )
 
 func globalConfigDir() string {
@@ -45,16 +48,7 @@ func processConfig(buf []byte) []byte {
 	return newbuf
 }
 
-func LoadConfig() (config.Config, error) {
-	cfg := config.Config{}
-
-	cfgpath, _ := os.UserConfigDir()
-	paths := [...]string{
-		".",
-		cfgpath,
-		globalConfigDir(),
-	}
-
+func loadPrimary(cfg *config.Config, paths []string) error {
 	found := false
 	for _, path := range paths {
 		f, err := os.Open(filepath.Join(path, PrimaryConfigName))
@@ -65,19 +59,42 @@ func LoadConfig() (config.Config, error) {
 			in, err := io.ReadAll(f)
 			in = processConfig(in)
 			if err != nil {
-				return config.Config{}, ErrIO
+				return fmt.Errorf("primary config: %w", ErrIO)
 			}
 
-			err = json.Unmarshal([]byte(in), &cfg)
+			err = json.Unmarshal([]byte(in), cfg)
 			if err != nil {
-				return config.Config{}, fmt.Errorf("bad syntax: %w", err)
+				return fmt.Errorf("primary config: bad syntax: %w", err)
 			}
 			break
 		}
 	}
 
 	if !found {
-		return config.Config{}, ErrNotFound
+		return fmt.Errorf("primary config: %w", ErrNotFound)
+	}
+
+	return nil
+}
+
+func LoadConfig() (config.Config, error) {
+	cfg := config.Config{}
+
+	cfgpath, _ := os.UserConfigDir()
+	paths := []string{
+		".",
+		cfgpath,
+		globalConfigDir(),
+	}
+
+	err := loadPrimary(&cfg, paths)
+	if err != nil {
+		return config.Config{}, err
+	}
+
+	err = loadOutputs(&cfg, paths)
+	if err != nil {
+		return config.Config{}, err
 	}
 
 	return cfg, nil

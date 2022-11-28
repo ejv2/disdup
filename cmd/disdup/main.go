@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/ethanv2/disdup"
+	clconf "github.com/ethanv2/disdup/cmd/disdup/conf"
 )
 
 // Command line flags.
@@ -15,7 +16,7 @@ var (
 )
 
 func main() {
-	cfg, err := LoadConfig()
+	cfg, err := clconf.LoadConfig()
 	if err != nil {
 		log.Fatal("config error: ", err)
 	}
