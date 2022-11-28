@@ -36,6 +36,8 @@ var (
 // flags. See collation flags documentation for use.
 type Writer struct {
 	Output io.WriteCloser
+	// Prefix will be prepended to each message log.
+	Prefix string
 	// Collate mode. See constants for documentation.
 	Collate int
 	lg      *log.Logger
@@ -50,7 +52,7 @@ func (w *Writer) Open(s *discordgo.Session) error {
 		panic(ErrNilOutput)
 	}
 
-	w.lg = log.New(w.Output, "disdup", log.LstdFlags)
+	w.lg = log.New(w.Output, w.Prefix, log.LstdFlags)
 
 	// Add an extra newline to the beginning of un-collated output to make
 	// format consistent with collation messages
