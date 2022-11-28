@@ -73,6 +73,29 @@ func NewDuplicator(conf config.Config) (Duplicator, error) {
 		return Duplicator{}, fmt.Errorf("duplicator: connection: %w", err)
 	}
 
+	// Open up outputs
+	done, fail := make(chan struct{}, len(conf.Outputs)), make(chan error, 1)
+	for _, output := range conf.Outputs {
+		go func(out config.OutputConfig) {
+			err := out.Output.Open(dup.conn)
+			if err != nil {
+				select {
+				case fail <- err:
+				default:
+				}
+			}
+
+			done <- struct{}{}
+		}(output)
+	}
+	for i := 0; i < cap(done); i++ {
+		select {
+		case err := <-fail:
+			return Duplicator{}, fmt.Errorf("duplicator: output open: %w", err)
+		case <-done:
+		}
+	}
+
 	return dup, nil
 }
 
