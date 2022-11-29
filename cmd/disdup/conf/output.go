@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	config "github.com/ethanv2/disdup/conf"
 	"github.com/ethanv2/disdup/output"
@@ -81,7 +80,7 @@ func loadOutputs(cfg *config.Config, paths []string) error {
 	found := false
 	var outputs map[string]Output
 	for _, dir := range paths {
-		path := filepath.Join(dir, OutputConfigName)
+		path := dir + string(os.PathSeparator) + OutputConfigName
 		f, err := os.Open(path)
 		if err == nil {
 			defer f.Close()
