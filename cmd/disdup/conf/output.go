@@ -44,29 +44,40 @@ func parseCollation(conf map[string]interface{}) (int, error) {
 	return 0, nil
 }
 
+func parseWriter(dest io.WriteCloser, conf map[string]interface{}) (*output.Writer, error) {
+	coll, err := parseCollation(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	rprefix, ok := conf["prefix"]
+	prefix := ""
+	if ok {
+		if prefix, ok = rprefix.(string); !ok {
+			return nil, fmt.Errorf("key prefix: %w", ErrWrongType)
+		}
+		prefix += " " // Append a space to properly space output in log format
+	}
+
+	w := &output.Writer{
+		Output:  dest,
+		Prefix:  prefix,
+		Collate: coll,
+	}
+	return w, nil
+}
+
 // convertOutput converts a temporary representation of an output to the format
 // which can be read by disdup.
 func convertOutput(name string, tmpl Output, cfg *config.Config) error {
+	var err error
 	var out output.Output
 
 	switch tmpl.Type {
 	case "stdout":
-		col, err := parseCollation(tmpl.Arguments)
+		out, err = parseWriter(os.Stdout, tmpl.Arguments)
 		if err != nil {
-			return fmt.Errorf("output %s: %w", name, err)
-		}
-		rprefix, ok := tmpl.Arguments["prefix"]
-		prefix := ""
-		if ok {
-			if prefix, ok = rprefix.(string); !ok {
-				return fmt.Errorf("output %s: key prefix: %w", name, ErrWrongType)
-			}
-			prefix += " " // Append a space to properly space output in log format
-		}
-		out = &output.Writer{
-			Output:  os.Stdout,
-			Collate: col,
-			Prefix:  prefix,
+			return err
 		}
 	default:
 		return ErrOutput
