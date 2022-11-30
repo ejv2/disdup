@@ -65,7 +65,6 @@ func NewDuplicator(conf config.Config) (Duplicator, error) {
 	// Event handling.
 	// Discordgo automatically dispatches events to the correct handler
 	// based on method signature.
-	dup.conn.AddHandler(dup.onDisconnect)
 	dup.conn.AddHandler(dup.onMessage)
 	dup.conn.AddHandler(dup.onJoin)
 
@@ -197,11 +196,4 @@ func (d Duplicator) onJoin(s *discordgo.Session, c *discordgo.GuildCreate) {
 	if err := d.updateNickname(c.Guild); err != nil {
 		d.err(err)
 	}
-}
-
-// onDisconnect is the event handler for a disconnection event. Note that this
-// is sent from discordgo, not remotely, so this can still handle the network
-// dropping.
-func (d Duplicator) onDisconnect(s *discordgo.Session, c *discordgo.Disconnect) {
-	d.err(ErrClosed)
 }
