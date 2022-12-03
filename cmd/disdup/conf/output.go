@@ -67,6 +67,62 @@ func parseWriter(dest io.WriteCloser, conf map[string]interface{}) (*output.Writ
 	return w, nil
 }
 
+func parseMailer(conf map[string]interface{}) (*output.Mailer, error) {
+	ret := &output.Mailer{}
+
+	// Specific keys mapped to non-string values
+	// Need to be deleted after use to prevent next loop from using them
+	rreply, ok := conf["reply_mode"]
+	if ok {
+		reply, ok := rreply.(uint)
+		if !ok {
+			return nil, fmt.Errorf("key reply_mode: %w: expected string", ErrWrongType)
+		}
+
+		ret.ReplyMode = reply
+		delete(conf, "reply_mode")
+	}
+	rsrv, ok := conf["server"]
+	if ok {
+		srv, ok := rsrv.(map[string]string)
+		if !ok {
+			return nil, fmt.Errorf("key reply_mode: %w: expected all string values", ErrWrongType)
+		}
+
+		for key, val := range srv {
+			switch key {
+			case "address":
+				ret.Server.Address = val
+			case "username":
+				ret.Server.Username = val
+			case "password":
+				ret.Server.Password = val
+			}
+		}
+	}
+
+	// Generic keys mapped to string values
+	for key, rval := range conf {
+		val, ok := rval.(string)
+		if !ok {
+			return nil, fmt.Errorf("key %s: %w: expected string", key, ErrWrongType)
+		}
+
+		switch key {
+		case "to":
+			ret.To = val
+		case "from":
+			ret.From = val
+		case "preamble":
+			ret.Preamble = val
+		case "footer":
+			ret.Footer = val
+		}
+	}
+
+	return ret, nil
+}
+
 // convertOutput converts a temporary representation of an output to the format
 // which can be read by disdup.
 func convertOutput(name string, tmpl Output, cfg *config.Config) error {
@@ -76,11 +132,14 @@ func convertOutput(name string, tmpl Output, cfg *config.Config) error {
 	switch tmpl.Type {
 	case "stdout":
 		out, err = parseWriter(os.Stdout, tmpl.Arguments)
-		if err != nil {
-			return err
-		}
+	case "mail":
+		out, err = parseMailer(tmpl.Arguments)
 	default:
-		return ErrOutput
+		err = ErrOutput
+	}
+
+	if err != nil {
+		return err
 	}
 
 	cfg.Outputs = append(cfg.Outputs, config.OutputConfig{Name: name, Output: out})
