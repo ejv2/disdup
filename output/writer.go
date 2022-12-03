@@ -30,7 +30,7 @@ var (
 )
 
 // Writer outputs messages to an io.Writer, formatted with a timestamp, author
-// and channel name. The zero value of this type
+// and channel name.
 //
 // If collate is non-zero, it is a bitwise combination of one or more collation
 // flags. See collation flags documentation for use.
