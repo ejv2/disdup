@@ -3,6 +3,7 @@ package output
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -44,7 +45,53 @@ const (
 	// The interval at which the mailer will disconnect from the server to
 	// free resources.
 	mailerReconnectionInterval = 30 * time.Second
+	// Body format string.
+	// Templates are (in order):
+	//   - Preamble
+	//   - Message text
+	//   - Remarks
+	//   - Footer
+	mailerBodyFormat = `%s
+
+%s
+
+--------
+%s
+%s`
 )
+
+// formatSubject replaces formatting options documented in the Mailer struct in
+// the SubjectFormat string.
+func formatSubject(format string, msg Message) string {
+	out := format
+
+	out = strings.ReplaceAll(out, "{id}", msg.Message.ID)
+	out = strings.ReplaceAll(out, "{author}", msg.Author.Username)
+	out = strings.ReplaceAll(out, "{guild}", msg.GuildName)
+	out = strings.ReplaceAll(out, "{guild_id}", msg.GuildID)
+	out = strings.ReplaceAll(out, "{channel}", msg.ChannelName)
+	out = strings.ReplaceAll(out, "{channel_id}", msg.ChannelID)
+	out = strings.ReplaceAll(out, "{time}", time.Now().String())
+
+	return out
+}
+
+// formatRemarks enumerates possible remarks and appends to a remarks string
+// for stamping on outgoing emails. Each remark ends in a stop and a space to
+// begin the next remark.
+func formatRemarks(msg Message) string {
+	b := &strings.Builder{}
+
+	if len(msg.Attachments) > 0 {
+		fmt.Fprintf(b, "This message had %d attachments, which are enclosed. ", len(msg.Attachments))
+	}
+
+	if len(msg.Embeds) > 0 {
+		fmt.Fprintf(b, "This message had %d embeds, which are enclosed (if available). ", len(msg.Embeds))
+	}
+
+	return b.String()
+}
 
 // A MailServer is the basic configuration for an SMTP server connection.
 // Minimal details are supplied, which are the minimum required to connect to
@@ -118,7 +165,7 @@ type Mailer struct {
 	Server MailServer
 
 	cancel  chan struct{}
-	outtray chan gomail.Message
+	outtray chan *gomail.Message
 
 	// After init, the below are owned by the runner goroutine
 	connected bool
@@ -133,8 +180,16 @@ func (m *Mailer) send(msg *gomail.Message) {
 		m.snd, err = m.conn.Dial()
 		if err != nil {
 			// Drop this mail for now; retry again later
+			log.Println("email failed to send", err)
 			return
 		}
+	}
+
+	err = gomail.Send(m.snd, msg)
+	if err != nil {
+		// Drop this mail for now; retry again later
+		log.Println("email failed to send", err)
+		return
 	}
 }
 
@@ -155,7 +210,7 @@ func (m *Mailer) run() {
 			if !timer.Stop() {
 				<-timer.C
 			}
-			m.send(&msg)
+			m.send(msg)
 			timer.Reset(mailerReconnectionInterval)
 		case <-timer.C:
 			if !m.connected {
@@ -171,7 +226,7 @@ func (m *Mailer) run() {
 
 func (m *Mailer) Open(s *discordgo.Session) error {
 	m.cancel = make(chan struct{})
-	m.outtray = make(chan gomail.Message)
+	m.outtray = make(chan *gomail.Message)
 
 	host, port, err := m.Server.AddrInfo()
 	if err != nil {
@@ -192,8 +247,17 @@ func (m *Mailer) Open(s *discordgo.Session) error {
 	return nil
 }
 
+// Write formats the incoming message for email and then hands off to the
+// sender to send to the server.
 func (m *Mailer) Write(msg Message) {
-	// TODO
+	mail := gomail.NewMessage()
+	mail.SetHeader("To", m.To)
+	mail.SetHeader("From", m.From)
+	mail.SetHeader("Subject", formatSubject(m.SubjectFormat, msg))
+
+	mail.SetBody("text/plain", fmt.Sprintf(mailerBodyFormat, m.Preamble, msg.PrettyContent, formatRemarks(msg), m.Footer))
+
+	m.outtray <- mail
 }
 
 func (m *Mailer) Close() error {
