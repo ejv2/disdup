@@ -36,7 +36,7 @@ const (
 // Default configuration values for the output. Some values are set to these if
 // they are their zero values at the time that Open is called.
 const (
-	MailerDefaultSubject = "[disdup] {user} in #{channel}"
+	MailerDefaultSubject = "[disdup] {author} in #{channel}"
 	MailerDefaultFooter  = "This email was sent by Disdup. https://github.com/ethanv2/disdup"
 )
 
