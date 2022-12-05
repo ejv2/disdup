@@ -237,6 +237,13 @@ func (m *Mailer) Open(s *discordgo.Session) error {
 	if err != nil {
 		return fmt.Errorf("output mailer: %w", ErrMailConnection)
 	}
+	if m.Footer == "" {
+		m.Footer = MailerDefaultFooter
+	}
+	if m.SubjectFormat == "" {
+		m.SubjectFormat = MailerDefaultSubject
+	}
+
 	m.conn = gomail.NewDialer(host, port, m.Server.Username, m.Server.Password)
 	m.conn.StartTLSPolicy = gomail.MandatoryStartTLS
 
