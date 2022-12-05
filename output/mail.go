@@ -221,6 +221,9 @@ func (m *Mailer) run() {
 			m.snd.Close()
 			m.connected = false
 		case <-m.cancel:
+			if m.connected {
+				m.snd.Close()
+			}
 			return
 		}
 	}
