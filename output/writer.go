@@ -77,7 +77,7 @@ func (w *Writer) Write(m Message) {
 		if w.Collate >= WriterCollateUser && m.Author.ID == w.lastAuthor && m.ChannelID == w.lastChannel {
 			// Length of username plus three characters padding for alignment
 			// This must be updated if output format changes!
-			pref := strings.Repeat(" ", len([]rune(m.Author.Username))+3)
+			pref := strings.Repeat(" ", len([]rune(m.Author.String()))+2)
 			w.lg.Printf("%s%s", pref, m.PrettyContent)
 		} else {
 			w.lg.Printf("%s: %s", m.Author, m.PrettyContent)
