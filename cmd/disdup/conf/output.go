@@ -82,14 +82,19 @@ func parseMailer(conf map[string]interface{}) (*output.Mailer, error) {
 		ret.ReplyMode = reply
 		delete(conf, "reply_mode")
 	}
-	rsrv, ok := conf["server"]
+	orsrv, ok := conf["server"]
 	if ok {
-		srv, ok := rsrv.(map[string]string)
+		rsrv, ok := orsrv.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("key reply_mode: %w: expected all string values", ErrWrongType)
+			return nil, fmt.Errorf("key server: %w: expected object", ErrWrongType)
 		}
 
-		for key, val := range srv {
+		for key, rval := range rsrv {
+			val, ok := rval.(string)
+			if !ok {
+				return nil, fmt.Errorf("key server: %w: expected all string values", ErrWrongType)
+			}
+
 			switch key {
 			case "address":
 				ret.Server.Address = val
@@ -99,6 +104,7 @@ func parseMailer(conf map[string]interface{}) (*output.Mailer, error) {
 				ret.Server.Password = val
 			}
 		}
+		delete(conf, "server")
 	}
 
 	// Generic keys mapped to string values
