@@ -194,7 +194,9 @@ func (m *Mailer) send(msg *gomail.Message) {
 }
 
 // run is the main runner method of this mailer. It runs until the Close()
-// method is called one the Mailer.
+// method is called one the Mailer. This is run concurrently to allow for the
+// maintenance of SMTP connections. run also maintains the lookup tables of
+// threads and senders, which should be considered owned by this goroutine.
 func (m *Mailer) run() {
 	timer := time.NewTimer(mailerReconnectionInterval)
 	defer timer.Stop()
