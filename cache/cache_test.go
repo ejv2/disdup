@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"errors"
+
 	"github.com/bwmarrin/discordgo"
 
 	"testing"
@@ -193,4 +195,64 @@ func TestRetrieval(t *testing.T) {
 
 	t.Run("Guild", testGuild)
 	t.Run("GuildError", testGuildError)
+}
+
+func testAttachment(t *testing.T) {
+	url := "https://imgs.xkcd.com/comics/circuit_diagram.png"
+	provider := MockProvider{}
+	cache := NewCache(provider)
+
+	att := &discordgo.MessageAttachment{
+		ID:          "12345ABCDEF",
+		URL:         url,
+		ProxyURL:    url,
+		Filename:    "circuit_diagram.png",
+		ContentType: "image/png",
+	}
+	_, err := cache.Attachment(att)
+	if err != nil {
+		t.Fatalf("Unexpected error from known good URL: %s", err.Error())
+	}
+
+	if _, ok := cache.attachmentCache[url]; !ok {
+		t.Errorf("Cache did not insert attachment correctly to cache map")
+	}
+}
+
+func testAttachmentFailure(t *testing.T) {
+	provider := MockProvider{}
+	cache := NewCache(provider)
+	cases := []struct {
+		URL    string
+		Expect error
+	}{
+		{"https://example.com/notexist.png", ErrGetFailed},
+		{"http://doesnotexist.gov.uk/", ErrRequest},
+	}
+
+	for _, c := range cases {
+		att := &discordgo.MessageAttachment{
+			ID:          "doesn't matter",
+			Filename:    "who cares",
+			URL:         c.URL,
+			ProxyURL:    c.URL,
+			ContentType: "image/png",
+		}
+
+		_, err := cache.Attachment(att)
+		if err == nil {
+			t.Errorf("%s: unexpected successful fetch, expected failure", c.URL)
+		}
+		if !errors.Is(err, c.Expect) {
+			t.Errorf("%s: wrong error\nexpect: %s\ngot: %s", c.URL, c.Expect.Error(), err.Error())
+		}
+		if _, ok := cache.attachmentCache[c.URL]; ok {
+			t.Errorf("%s: inserted into cache despite error in download", c.URL)
+		}
+	}
+}
+
+func TestAttachment(t *testing.T) {
+	t.Run("Success", testAttachment)
+	t.Run("Failure", testAttachmentFailure)
 }

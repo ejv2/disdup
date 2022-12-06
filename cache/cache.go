@@ -2,6 +2,9 @@ package cache
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -10,14 +13,25 @@ import (
 var (
 	ErrMissing     = errors.New("cache: entry not present")
 	ErrNilProvider = errors.New("cache: attempted to create cache with nil provider")
+	ErrIO          = errors.New("cache: attachment download: I/O error")
+	ErrRequest     = errors.New("cache: attachment download: network request failed")
+	ErrGetFailed   = errors.New("cache: attachment download: http error")
 )
 
 // Cache represents a cache of Discord API data objects.
 type Cache struct {
-	provider     Provider
-	channelCache map[string]*discordgo.Channel
-	userCache    map[string]*discordgo.User
-	guildCache   map[string]*discordgo.Guild
+	provider        Provider
+	channelCache    map[string]*discordgo.Channel
+	userCache       map[string]*discordgo.User
+	guildCache      map[string]*discordgo.Guild
+	attachmentCache map[string]*Attachment
+}
+
+// An Attachment is a generic representation for an attachment downloaded from
+// the Discord API.
+type Attachment struct {
+	Name, Type string
+	Content    []byte
 }
 
 // Provider is a data provider for discord users and channels. This is mainly
@@ -36,10 +50,11 @@ func NewCache(p Provider) *Cache {
 	}
 
 	return &Cache{
-		provider:     p,
-		channelCache: make(map[string]*discordgo.Channel),
-		userCache:    make(map[string]*discordgo.User),
-		guildCache:   make(map[string]*discordgo.Guild),
+		provider:        p,
+		channelCache:    make(map[string]*discordgo.Channel),
+		userCache:       make(map[string]*discordgo.User),
+		guildCache:      make(map[string]*discordgo.Guild),
+		attachmentCache: make(map[string]*Attachment),
 	}
 }
 
@@ -95,6 +110,39 @@ func (c *Cache) Guild(ID string) (discordgo.Guild, error) {
 
 	c.guildCache[ID] = newuser
 	return *newuser, nil
+}
+
+// Attachment looks up and returns the content and info for a remote attachment
+// from the Discord API. Lookups from the same url are guaranteed not to cause
+// an API hit. Errors are not cached and the attachment is assumed to not
+// exist.
+func (c *Cache) Attachment(at *discordgo.MessageAttachment) (Attachment, error) {
+	if a, ok := c.attachmentCache[at.ProxyURL]; ok {
+		return *a, nil
+	}
+
+	ret := Attachment{
+		Name: at.Filename,
+		Type: at.ContentType,
+	}
+
+	r, err := http.Get(at.ProxyURL)
+	if err != nil {
+		return ret, fmt.Errorf("%w: %s", ErrRequest, err.Error())
+	}
+	if r.StatusCode != 200 {
+		return ret, ErrGetFailed
+	}
+	defer r.Body.Close()
+
+	buf, err := io.ReadAll(r.Body)
+	if err != nil {
+		return ret, fmt.Errorf("%w: %s", ErrIO, err.Error())
+	}
+	ret.Content = buf
+
+	c.attachmentCache[at.ProxyURL] = &ret
+	return ret, nil
 }
 
 // InvalidateChannel invalidates the cache entry for a given channel ID.
