@@ -183,6 +183,8 @@ func (m *Mailer) send(msg *gomail.Message) {
 			log.Println("email failed to send", err)
 			return
 		}
+
+		m.connected = true
 	}
 
 	err = gomail.Send(m.snd, msg)
@@ -209,9 +211,7 @@ func (m *Mailer) run() {
 	for {
 		select {
 		case msg := <-m.outtray:
-			if !timer.Stop() {
-				<-timer.C
-			}
+			timer.Stop()
 			m.send(msg)
 			timer.Reset(mailerReconnectionInterval)
 		case <-timer.C:
