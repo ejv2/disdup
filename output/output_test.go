@@ -1,10 +1,13 @@
 package output_test
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/ethanv2/disdup/output"
+
+	"testing"
 )
 
 var fakeSession = &discordgo.Session{}
@@ -84,4 +87,45 @@ func (w *WriteNopCloser) Write(p []byte) (n int, err error) {
 func (w *WriteNopCloser) Close() error {
 	w.W = nil
 	return nil
+}
+
+func TestAttachment_Read(t *testing.T) {
+	cases := []struct {
+		A output.Attachment
+		// All attachments tested will be string-able, for simplicity
+		Expect string
+	}{
+		{output.Attachment{Content: []byte("testing string 1234")}, "testing string 1234"},
+		{output.Attachment{Content: []byte("")}, ""},
+	}
+
+	for _, c := range cases {
+		// First read
+		out, err := io.ReadAll(&c.A)
+		if err != nil {
+			t.Errorf("unexpected error from io.ReadAll: %s", err.Error())
+		}
+		if string(out) != c.Expect {
+			t.Errorf("unexpected output from io.ReadAll\nexpect: %s\ngot: %s", c.Expect, string(out))
+		}
+
+		// Second read should yield same results
+		out2, err := io.ReadAll(&c.A)
+		if err != nil {
+			t.Errorf("unexpected error from io.ReadAll: %s", err.Error())
+		}
+		if string(out2) != c.Expect {
+			t.Errorf("unexpected output from io.ReadAll\nexpect: %s\ngot: %s", c.Expect, string(out2))
+		}
+
+		// Third read using io.Copy should also be identical
+		b := &bytes.Buffer{}
+		_, err = io.Copy(b, &c.A)
+		if err != nil {
+			t.Errorf("unexpected error from io.Copy: %s", err.Error())
+		}
+		if b.String() != c.Expect {
+			t.Errorf("unexpected output from io.Copy\nexpect: %s\ngot: %s", c.Expect, b.String())
+		}
+	}
 }
