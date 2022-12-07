@@ -117,7 +117,7 @@ func (c *Cache) Guild(ID string) (discordgo.Guild, error) {
 // an API hit. Errors are not cached and the attachment is assumed to not
 // exist.
 func (c *Cache) Attachment(at *discordgo.MessageAttachment) (Attachment, error) {
-	if a, ok := c.attachmentCache[at.ProxyURL]; ok {
+	if a, ok := c.attachmentCache[at.URL]; ok {
 		return *a, nil
 	}
 
@@ -126,7 +126,7 @@ func (c *Cache) Attachment(at *discordgo.MessageAttachment) (Attachment, error) 
 		Type: at.ContentType,
 	}
 
-	r, err := http.Get(at.ProxyURL)
+	r, err := http.Get(at.URL)
 	if err != nil {
 		return ret, fmt.Errorf("%w: %s", ErrRequest, err.Error())
 	}
@@ -141,7 +141,7 @@ func (c *Cache) Attachment(at *discordgo.MessageAttachment) (Attachment, error) 
 	}
 	ret.Content = buf
 
-	c.attachmentCache[at.ProxyURL] = &ret
+	c.attachmentCache[at.URL] = &ret
 	return ret, nil
 }
 
