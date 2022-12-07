@@ -269,6 +269,10 @@ func (m *Mailer) Write(msg Message) {
 
 	mail.SetBody("text/plain", fmt.Sprintf(mailerBodyFormat, m.Preamble, msg.PrettyContent, formatRemarks(msg), m.Footer))
 
+	for i, att := range msg.Downloads {
+		mail.AttachReader(att.Filename, &msg.Downloads[i])
+	}
+
 	m.outtray <- mail
 }
 

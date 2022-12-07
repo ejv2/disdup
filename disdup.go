@@ -171,6 +171,20 @@ func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 			GuildName:     g.Name,
 		}
 
+		for _, att := range m.Attachments {
+			a, err := d.cache.Attachment(att)
+			if err != nil {
+				log.Println("[WARNING]: duplicator: attachment download failed:", err)
+				continue
+			}
+
+			msg.Downloads = append(msg.Downloads, output.Attachment{
+				Filename: a.Name,
+				Type:     a.Type,
+				Content:  a.Content,
+			})
+		}
+
 		gconf := d.conf.FindGuild(m.GuildID, g.Name)
 		for _, o := range d.conf.Outputs {
 			go func(out config.OutputConfig) {
