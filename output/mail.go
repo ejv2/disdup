@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	gomail "github.com/Shopify/gomail"
 	"github.com/bwmarrin/discordgo"
-	gomail "gopkg.in/mail.v2"
 )
 
 // Mailer initialization errors.
