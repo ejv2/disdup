@@ -124,6 +124,9 @@ func (d Duplicator) Close() {
 		close(d.stop)
 	}
 	d.conn.Close()
+	for _, out := range d.conf.Outputs {
+		out.Output.Close()
+	}
 }
 
 // err propagates an error to the client code, ensuring that this cannot block
