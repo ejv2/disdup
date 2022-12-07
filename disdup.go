@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/ethanv2/disdup/cache"
 	config "github.com/ethanv2/disdup/conf"
@@ -26,6 +27,8 @@ type Duplicator struct {
 	cache *cache.Cache
 	conf  config.Config
 
+	lastPrune time.Time
+
 	cerr chan error
 	stop chan struct{}
 }
@@ -41,9 +44,10 @@ type Duplicator struct {
 func NewDuplicator(conf config.Config) (Duplicator, error) {
 	var err error
 	dup := Duplicator{
-		conf: conf,
-		cerr: make(chan error),
-		stop: make(chan struct{}),
+		conf:      conf,
+		cerr:      make(chan error),
+		stop:      make(chan struct{}),
+		lastPrune: time.Now(),
 	}
 
 	dup.conn, err = discordgo.New("Bot " + conf.Token)
@@ -141,7 +145,11 @@ func (d Duplicator) updateNickname(g *discordgo.Guild) error {
 
 // onMessage is the event handler for a message creation event in any of the
 // guilds of which the bot is a member.
-func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+func (d *Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if time.Since(d.lastPrune) >= cache.AttachmentLifetime {
+		d.cache.Clean()
+	}
+
 	c, err := d.cache.Channel(m.ChannelID)
 	if err != nil {
 		log.Println("[WARNING]: duplicator: onmessage: invalid channel:", err)
@@ -201,7 +209,6 @@ func (d Duplicator) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) 
 				}
 			}(o)
 		}
-		// log.Printf("@%s in #%s: %s", msg.Author.Username, msg.ChannelName, msg.Content)
 	}
 }
 
