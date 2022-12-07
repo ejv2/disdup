@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -16,6 +17,14 @@ var (
 	ErrIO          = errors.New("cache: attachment download: I/O error")
 	ErrRequest     = errors.New("cache: attachment download: network request failed")
 	ErrGetFailed   = errors.New("cache: attachment download: http error")
+)
+
+// Cache cleanup constants.
+const (
+	// Approximate maximum lifetime an attachment can live for without being cleaned up.
+	AttachmentLifetime = time.Minute * 5
+	// Threshold at which the attachments cache will begin to prune excess elements.
+	AttachmentPruneThreshold = 1000
 )
 
 // Cache represents a cache of Discord API data objects.
@@ -30,8 +39,9 @@ type Cache struct {
 // An Attachment is a generic representation for an attachment downloaded from
 // the Discord API.
 type Attachment struct {
-	Name, Type string
-	Content    []byte
+	Name, Type    string
+	Content       []byte
+	LastReference time.Time
 }
 
 // Provider is a data provider for discord users and channels. This is mainly
@@ -118,6 +128,7 @@ func (c *Cache) Guild(ID string) (discordgo.Guild, error) {
 // exist.
 func (c *Cache) Attachment(at *discordgo.MessageAttachment) (Attachment, error) {
 	if a, ok := c.attachmentCache[at.URL]; ok {
+		a.LastReference = time.Now()
 		return *a, nil
 	}
 
@@ -140,6 +151,7 @@ func (c *Cache) Attachment(at *discordgo.MessageAttachment) (Attachment, error) 
 		return ret, fmt.Errorf("%w: %s", ErrIO, err.Error())
 	}
 	ret.Content = buf
+	ret.LastReference = time.Now()
 
 	c.attachmentCache[at.URL] = &ret
 	return ret, nil
@@ -173,4 +185,24 @@ func (c *Cache) InvalidateGuild(ID string) error {
 
 	delete(c.guildCache, ID)
 	return nil
+}
+
+// Clean walks the cache, freeing any bulky cached items which are deemed not
+// particularly useful (e.g attachments which have not been reused in a while).
+func (c *Cache) Clean() {
+	delfirst := 0
+	if len(c.attachmentCache) > AttachmentPruneThreshold {
+		delfirst = len(c.attachmentCache) - AttachmentPruneThreshold
+	}
+
+	i := 0
+	for key, val := range c.attachmentCache {
+		if i < delfirst {
+			delete(c.attachmentCache, key)
+		} else if time.Since(val.LastReference) > AttachmentLifetime {
+			delete(c.attachmentCache, key)
+		}
+
+		i++
+	}
 }

@@ -2,6 +2,8 @@ package cache
 
 import (
 	"errors"
+	"strconv"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -214,8 +216,17 @@ func testAttachment(t *testing.T) {
 		t.Fatalf("Unexpected error from known good URL: %s", err.Error())
 	}
 
-	if _, ok := cache.attachmentCache[url]; !ok {
+	ret, ok := cache.attachmentCache[url]
+	if !ok {
 		t.Errorf("Cache did not insert attachment correctly to cache map")
+	}
+	firstTime := ret.LastReference
+
+	// After new reference, the current time should be later than
+	cache.Attachment(att)
+	nret := cache.attachmentCache[url]
+	if nret.LastReference.Sub(firstTime) <= 0 {
+		t.Errorf("Bad timing value after new reference\nexpect time after: %v\ngot: %v", firstTime, nret.LastReference)
 	}
 }
 
@@ -255,4 +266,49 @@ func testAttachmentFailure(t *testing.T) {
 func TestAttachment(t *testing.T) {
 	t.Run("Success", testAttachment)
 	t.Run("Failure", testAttachmentFailure)
+}
+
+// Tests cleaning the cache based on last reference time.
+func testCacheCleanRef(t *testing.T) {
+	c := NewCache(MockProvider{})
+
+	// Attachment referenced 24 hours in the future - will not be deleted
+	c.attachmentCache["0"] = &Attachment{
+		Name:          "0",
+		LastReference: time.Now().Add(time.Hour * 24),
+	}
+	// Attachment last referenced two deletion cycles ago - *will* be deleted
+	c.attachmentCache["1"] = &Attachment{
+		Name:          "1",
+		LastReference: time.Now().Add(-2 * AttachmentLifetime),
+	}
+	c.Clean()
+
+	if _, ok := c.attachmentCache["0"]; !ok {
+		t.Error("element '0' was wrongfully removed from cache")
+	}
+	if _, ok := c.attachmentCache["1"]; ok {
+		t.Error("element '1' was wrongfully saved from removal from cache")
+	}
+}
+
+// Tests cleaning the cache based on the count in the cache.
+func testCacheCleanLeak(t *testing.T) {
+	c := NewCache(MockProvider{})
+
+	// 100 excess elements - should be pruned down to the prune threshold
+	for i := int64(2); i < AttachmentPruneThreshold+100; i++ {
+		str := strconv.FormatInt(i, 10)
+		c.attachmentCache[str] = &Attachment{Name: str}
+	}
+	c.Clean()
+
+	if len(c.attachmentCache) > AttachmentPruneThreshold {
+		t.Errorf("expected cache to reduce size to len() = %d, got len() = %d", AttachmentPruneThreshold, len(c.attachmentCache))
+	}
+}
+
+func TestCache_Clean(t *testing.T) {
+	t.Run("Time", testCacheCleanRef)
+	t.Run("Count", testCacheCleanLeak)
 }
