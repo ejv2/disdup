@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/ethanv2/disdup/cmd/disdup/out"
 	config "github.com/ethanv2/disdup/conf"
 	"github.com/ethanv2/disdup/output"
 )
@@ -15,6 +16,7 @@ import (
 var (
 	ErrWrongType      = errors.New("unexpected type")
 	ErrUnknownCollate = errors.New("unknown collation mode")
+	ErrMissingCommand = errors.New("missing key: command")
 )
 
 // An Output is a json-encodable representation of a disdup output.
@@ -129,6 +131,41 @@ func parseMailer(conf map[string]interface{}) (*output.Mailer, error) {
 	return ret, nil
 }
 
+func parseCommand(conf map[string]interface{}) (*out.Executor, error) {
+	rcmd, ok := conf["cmd"]
+	if !ok {
+		return nil, ErrMissingCommand
+	}
+	cmd, ok := rcmd.(string)
+	if !ok {
+		return nil, fmt.Errorf("key cmd: %w: expected string", ErrWrongType)
+	}
+
+	rargs, ok := conf["args"]
+	var args []string
+	if ok {
+		iargs, ok := rargs.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("key args: %w: expected array", ErrWrongType)
+		}
+		args = make([]string, 0, len(iargs))
+
+		for _, iarg := range iargs {
+			arg, ok := iarg.(string)
+			if !ok {
+				return nil, fmt.Errorf("key args: %w: expected string array", ErrWrongType)
+			}
+
+			args = append(args, arg)
+		}
+	}
+
+	return &out.Executor{
+		Command: cmd,
+		Args:    args,
+	}, nil
+}
+
 // convertOutput converts a temporary representation of an output to the format
 // which can be read by disdup.
 func convertOutput(name string, tmpl Output, cfg *config.Config) error {
@@ -140,6 +177,8 @@ func convertOutput(name string, tmpl Output, cfg *config.Config) error {
 		out, err = parseWriter(os.Stdout, tmpl.Arguments)
 	case "mail":
 		out, err = parseMailer(tmpl.Arguments)
+	case "command":
+		out, err = parseCommand(tmpl.Arguments)
 	default:
 		err = ErrOutput
 	}
