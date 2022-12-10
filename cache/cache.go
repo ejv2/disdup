@@ -1,3 +1,12 @@
+// Package cache implements a simple cache of Discord objects which require a
+// remote API or web request such that their details be discovered. It can also
+// be used to cache web requests to the Discord CDN. It is not designed to be
+// concurrency safe.
+//
+// The Cache object takes a provider as its main source of truth, being an
+// abstract representation of the Discord API. Out of the box, it is intended
+// to fit the method signatures of the *discordgo.Session object, such that it
+// can be conveniently passed as the provider.
 package cache
 
 import (
