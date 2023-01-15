@@ -100,6 +100,21 @@ func generateMessageID(msgID string) string {
 	return "<" + msgID + "@" + messageIDDomain + ">"
 }
 
+// messageReplies stores the last message ID from any given channel and users
+// in that channel, all indexed by channel ID.
+type messageReplies struct {
+	LastID   string
+	LastUser map[string]string
+}
+
+// outMessage is a formatted message ready to be sent by the mailer. The
+// original message is also sent over the channel to permit the storage of
+// reply modes.
+type outMessage struct {
+	orig Message
+	mail *gomail.Message
+}
+
 // A MailServer is the basic configuration for an SMTP server connection.
 // Minimal details are supplied, which are the minimum required to connect to
 // most servers.
@@ -172,10 +187,11 @@ type Mailer struct {
 	Server MailServer
 
 	cancel  chan struct{}
-	outtray chan *gomail.Message
+	outtray chan outMessage
 
 	// After init, the below are owned by the runner goroutine
 	connected bool
+	replies   map[string]messageReplies
 	conn      *gomail.Dialer
 	snd       gomail.SendCloser
 }
@@ -219,7 +235,8 @@ func (m *Mailer) run() {
 		select {
 		case msg := <-m.outtray:
 			timer.Stop()
-			m.send(msg)
+			m.send(msg.mail)
+			m.updateReplies(msg.orig)
 			timer.Reset(mailerReconnectionInterval)
 		case <-timer.C:
 			if !m.connected {
@@ -236,10 +253,35 @@ func (m *Mailer) run() {
 	}
 }
 
-func (m *Mailer) lookupReply(msg Message) string {
+func (m *Mailer) updateReplies(msg Message) {
 	switch m.ReplyMode {
 	case MailerReplyReplies:
-		return generateMessageID(msg.ReferencedMessage.ID)
+		return
+	case MailerReplyChannel:
+		umap := m.replies[msg.ChannelID].LastUser
+		if umap == nil {
+			umap = make(map[string]string)
+		}
+		m.replies[msg.ChannelID] = messageReplies{msg.ID, umap}
+		fallthrough
+	case MailerReplyUser:
+		m.replies[msg.ChannelID].LastUser[msg.Author.ID] = msg.ID
+	}
+}
+
+func (m *Mailer) lookupReply(msg Message) string {
+	switch m.ReplyMode {
+	case MailerReplyNone:
+		return ""
+	case MailerReplyReplies:
+		if msg.ReferencedMessage == nil {
+			return ""
+		}
+		return msg.ReferencedMessage.ID
+	case MailerReplyUser:
+		return m.replies[msg.ChannelID].LastID
+	case MailerReplyChannel:
+		return m.replies[msg.ChannelID].LastUser[msg.Author.ID]
 	default:
 		panic("mailer reply: unhandled or unknown reply mode")
 	}
@@ -247,7 +289,7 @@ func (m *Mailer) lookupReply(msg Message) string {
 
 func (m *Mailer) Open(s *discordgo.Session) error {
 	m.cancel = make(chan struct{})
-	m.outtray = make(chan *gomail.Message)
+	m.outtray = make(chan outMessage)
 
 	host, port, err := m.Server.AddrInfo()
 	if err != nil {
@@ -269,6 +311,7 @@ func (m *Mailer) Open(s *discordgo.Session) error {
 		return fmt.Errorf("%w: %s", ErrMailConnection, err.Error())
 	}
 	m.connected = true
+	m.replies = make(map[string]messageReplies)
 	m.snd = snd
 
 	go m.run()
@@ -293,11 +336,11 @@ func (m *Mailer) Write(msg Message) {
 		mail.AttachReader(att.Filename, &msg.Downloads[i])
 	}
 
-	if msg.ReferencedMessage != nil && m.ReplyMode != MailerReplyNone {
-		mail.SetHeader("In-Reply-To", m.lookupReply(msg))
+	if reply := m.lookupReply(msg); reply != "" {
+		mail.SetHeader("In-Reply-To", generateMessageID(reply))
 	}
 
-	m.outtray <- mail
+	m.outtray <- outMessage{msg, mail}
 }
 
 func (m *Mailer) Close() error {
