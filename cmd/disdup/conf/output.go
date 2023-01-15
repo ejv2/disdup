@@ -76,12 +76,12 @@ func parseMailer(conf map[string]interface{}) (*output.Mailer, error) {
 	// Need to be deleted after use to prevent next loop from using them
 	rreply, ok := conf["reply_mode"]
 	if ok {
-		reply, ok := rreply.(uint)
+		reply, ok := rreply.(float64)
 		if !ok {
-			return nil, fmt.Errorf("key reply_mode: %w: expected string", ErrWrongType)
+			return nil, fmt.Errorf("key reply_mode: %w: expected number", ErrWrongType)
 		}
 
-		ret.ReplyMode = reply
+		ret.ReplyMode = uint(reply)
 		delete(conf, "reply_mode")
 	}
 	orsrv, ok := conf["server"]

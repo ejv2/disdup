@@ -58,6 +58,7 @@ const (
 --------
 %s
 %s`
+	messageIDDomain = "noreply.disdup.io"
 )
 
 // formatSubject replaces formatting options documented in the Mailer struct in
@@ -91,6 +92,12 @@ func formatRemarks(msg Message) string {
 	}
 
 	return b.String()
+}
+
+// generateMessageID generates an RFC compatible unique message ID which will
+// be used in outgoing mail.
+func generateMessageID(msgID string) string {
+	return "<" + msgID + "@" + messageIDDomain + ">"
 }
 
 // A MailServer is the basic configuration for an SMTP server connection.
@@ -229,6 +236,15 @@ func (m *Mailer) run() {
 	}
 }
 
+func (m *Mailer) lookupReply(msg Message) string {
+	switch m.ReplyMode {
+	case MailerReplyReplies:
+		return generateMessageID(msg.ReferencedMessage.ID)
+	default:
+		panic("mailer reply: unhandled or unknown reply mode")
+	}
+}
+
 func (m *Mailer) Open(s *discordgo.Session) error {
 	m.cancel = make(chan struct{})
 	m.outtray = make(chan *gomail.Message)
@@ -266,11 +282,19 @@ func (m *Mailer) Write(msg Message) {
 	mail.SetHeader("To", m.To)
 	mail.SetHeader("From", m.From)
 	mail.SetHeader("Subject", formatSubject(m.SubjectFormat, msg))
+	mail.SetHeader("Message-Id", generateMessageID(msg.ID))
+	for hdr, val := range m.CustomHeaders {
+		mail.SetHeader(hdr, val)
+	}
 
 	mail.SetBody("text/plain", fmt.Sprintf(mailerBodyFormat, m.Preamble, msg.PrettyContent, formatRemarks(msg), m.Footer))
 
 	for i, att := range msg.Downloads {
 		mail.AttachReader(att.Filename, &msg.Downloads[i])
+	}
+
+	if msg.ReferencedMessage != nil && m.ReplyMode != MailerReplyNone {
+		mail.SetHeader("In-Reply-To", m.lookupReply(msg))
 	}
 
 	m.outtray <- mail
