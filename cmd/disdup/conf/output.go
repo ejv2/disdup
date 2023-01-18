@@ -7,9 +7,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/ethanv2/disdup/cmd/disdup/out"
-	config "github.com/ethanv2/disdup/conf"
-	"github.com/ethanv2/disdup/output"
+	"github.com/ejv2/disdup/cmd/disdup/out"
+	config "github.com/ejv2/disdup/conf"
+	"github.com/ejv2/disdup/output"
 )
 
 // Output parsing or processing errors.

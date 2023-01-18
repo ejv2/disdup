@@ -17,7 +17,7 @@ Package ``disdup`` implements a simple concurrent Discord message bouncer and tr
 To use the disdup package, simply import
 
 ```go
-import "github.com/ethanv2/disdup"
+import "github.com/ejv2/disdup"
 ```
 
 Then run

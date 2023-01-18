@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethanv2/disdup/output"
+	"github.com/ejv2/disdup/output"
 )
 
 var expectedChannelOutputs = []string{

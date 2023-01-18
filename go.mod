@@ -1,4 +1,4 @@
-module github.com/ethanv2/disdup
+module github.com/ejv2/disdup
 
 go 1.19
 

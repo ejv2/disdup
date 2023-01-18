@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	config "github.com/ethanv2/disdup/conf"
+	config "github.com/ejv2/disdup/conf"
 )
 
 // Key os-independent file names or paths.

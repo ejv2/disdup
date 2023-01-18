@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ethanv2/disdup/output"
+	"github.com/ejv2/disdup/output"
 
 	"testing"
 )

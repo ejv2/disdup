@@ -1,6 +1,6 @@
 package config
 
-import "github.com/ethanv2/disdup/output"
+import "github.com/ejv2/disdup/output"
 
 // Config is the primary disdup configuration, optionally encoded in JSON
 // format and loaded by the client code. It is passed to the main duplicator,

@@ -10,9 +10,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/ethanv2/disdup/cache"
-	config "github.com/ethanv2/disdup/conf"
-	"github.com/ethanv2/disdup/output"
+	"github.com/ejv2/disdup/cache"
+	config "github.com/ejv2/disdup/conf"
+	"github.com/ejv2/disdup/output"
 
 	"github.com/bwmarrin/discordgo"
 )

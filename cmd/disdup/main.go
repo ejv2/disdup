@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ethanv2/disdup"
-	clconf "github.com/ethanv2/disdup/cmd/disdup/conf"
+	"github.com/ejv2/disdup"
+	clconf "github.com/ejv2/disdup/cmd/disdup/conf"
 )
 
 // Command line flags.

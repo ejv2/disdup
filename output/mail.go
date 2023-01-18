@@ -37,7 +37,7 @@ const (
 // they are their zero values at the time that Open is called.
 const (
 	MailerDefaultSubject = "[disdup] {author} in #{channel}"
-	MailerDefaultFooter  = "This email was sent by Disdup. https://github.com/ethanv2/disdup"
+	MailerDefaultFooter  = "This email was sent by Disdup. https://github.com/ejv2/disdup"
 )
 
 // Internal implementation constants.

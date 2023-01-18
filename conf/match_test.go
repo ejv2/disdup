@@ -2,7 +2,7 @@ package config_test
 
 import (
 	"github.com/bwmarrin/discordgo"
-	config "github.com/ethanv2/disdup/conf"
+	config "github.com/ejv2/disdup/conf"
 
 	"testing"
 )

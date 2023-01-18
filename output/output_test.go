@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/ethanv2/disdup/output"
+	"github.com/ejv2/disdup/output"
 
 	"testing"
 )
