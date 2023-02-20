@@ -22,10 +22,10 @@ func (c Config) FindGuild(id, name string) *GuildConfig {
 			return nil
 		}
 
-		return &g
+		return g
 	}
 
-	return &g
+	return g
 }
 
 // MessageMatches returns true if a message matches the criteria in Config,

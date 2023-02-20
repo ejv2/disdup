@@ -15,16 +15,16 @@ type Test struct {
 
 var (
 	TestData = []Test{
-		{"Zero value", []bool{false, false, false}, config.Config{Guilds: map[string]config.GuildConfig{}}},
-		{"Disable", []bool{true, true, false}, config.Config{Guilds: map[string]config.GuildConfig{
+		{"Zero value", []bool{false, false, false}, config.Config{Guilds: map[string]*config.GuildConfig{}}},
+		{"Disable", []bool{true, true, false}, config.Config{Guilds: map[string]*config.GuildConfig{
 			"a": {},
 			"b": {},
 			"c": {Disable: true},
 		}}},
-		{"Disable (not present)", []bool{true, false, false}, config.Config{Guilds: map[string]config.GuildConfig{
+		{"Disable (not present)", []bool{true, false, false}, config.Config{Guilds: map[string]*config.GuildConfig{
 			"a": {},
 		}}},
-		{"Enable channel", []bool{true, true, false}, config.Config{Guilds: map[string]config.GuildConfig{
+		{"Enable channel", []bool{true, true, false}, config.Config{Guilds: map[string]*config.GuildConfig{
 			"a": {
 				// Should match; channel name matches
 				EnabledChannels: []string{"a"},
@@ -38,7 +38,7 @@ var (
 				EnabledChannels: []string{"a", "#b"},
 			},
 		}}},
-		{"Enable user", []bool{true, false, true}, config.Config{Guilds: map[string]config.GuildConfig{
+		{"Enable user", []bool{true, false, true}, config.Config{Guilds: map[string]*config.GuildConfig{
 			"a": {
 				// Should match; first username matches
 				EnabledUsers: []string{"Ethan Marshall", "abcdefg"},
@@ -52,7 +52,7 @@ var (
 				EnabledUsers: []string{"Apple user", "4206"},
 			},
 		}}},
-		{"Precedence", []bool{false, false, false}, config.Config{Guilds: map[string]config.GuildConfig{
+		{"Precedence", []bool{false, false, false}, config.Config{Guilds: map[string]*config.GuildConfig{
 			// Should *not* match; disable overrides all other metrics
 			"a": {
 				Disable: true,
